@@ -15,6 +15,7 @@ A powerful desktop application for managing your Fireflies.ai transcripts locall
 
 [What's New](#-whats-new-in-v20) • [Features](#-key-features) • [Quick Start](#-quick-start) • [User Guide](#-complete-user-guide) • [Troubleshooting](#-troubleshooting) • [Architecture](#-architecture)
 
+Note: use this when coding with Fireflies API, its helpful. [llms-full.txt](https://docs.fireflies.ai/llms-full.txt)
 </div>
 
 ---
