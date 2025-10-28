@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atomic 47 Labs - Firefiles Transcript App - Database Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.2.0/dist/dexie.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      padding: 20px 30px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    select, input {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    .stats {
+      padding: 20px 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      background: #fef3c7;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    tr:hover {
+      background: #f9fafb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h2 {
+      margin-bottom: 20px;
+    }
+
+    .modal-content pre {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🗄️ Database Viewer</h1>
+      <div class="subtitle">Atomic 47 Labs - Firefiles Transcript App - IndexedDB Explorer</div>
+    </header>
+
+    <div class="toolbar">
+      <select id="tableSelect">
+        <option value="">Select Table...</option>
+        <option value="meetings">Meetings</option>
+        <option value="files">Files</option>
+        <option value="transcriptContent">📝 Transcript Content</option>
+        <option value="summaryContent">📋 Summary Content</option>
+        <option value="searchMetadata">🔍 Search Metadata</option>
+        <option value="syncHistory">Sync History</option>
+        <option value="config">Configuration</option>
+      </select>
+      
+      <input type="text" id="searchBox" class="search-box" placeholder="Search...">
+      
+      <button class="btn btn-primary" onclick="loadTable()">🔄 Refresh</button>
+      <button class="btn btn-success" onclick="exportData()">📥 Export JSON</button>
+      <button class="btn btn-success" onclick="exportCSV()">📊 Export CSV</button>
+      <button class="btn btn-success" onclick="exportAllTranscripts()">📝 Export All Transcripts</button>
+      <button class="btn btn-success" onclick="exportAllSummaries()">📋 Export All Summaries</button>
+      <button class="btn btn-secondary" onclick="importData()">📤 Import JSON</button>
+      <button class="btn btn-danger" onclick="clearTable()">🗑️ Clear Table</button>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Meetings</div>
+        <div class="stat-value" id="statMeetings">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Files</div>
+        <div class="stat-value" id="statFiles">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Indexed Transcripts</div>
+        <div class="stat-value" id="statTranscripts">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Indexed Summaries</div>
+        <div class="stat-value" id="statSummaries">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sync Events</div>
+        <div class="stat-value" id="statEvents">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Database Size</div>
+        <div class="stat-value" id="statSize">-</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>Loading database...</div>
+      </div>
+      
+      <div id="tableContent" style="display: none;">
+        <div class="table-container">
+          <table id="dataTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Modal -->
+  <div id="viewModal" class="modal">
+    <div class="modal-content">
+      <h2>Record Details</h2>
+      <pre id="viewContent"></pre>
+      <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <!-- Import Input -->
+  <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
+
+  <script>
+    // Initialize Dexie - Using version 3 schema
+    const db = new Dexie('Atomic47Labs_FirefilesTranscriptApp');
+    
+    // Version 1
+    db.version(1).stores({
+      meetings: 'id, title, date, sync_status, organizer_email, *participants, last_synced_at',
+      files: '++id, meeting_id, file_type, status, downloaded_at',
+      syncHistory: '++id, timestamp, event_type, meeting_id',
+      config: 'key'
+    });
+    
+    // Version 3 - Added transcript content and search tables
+    db.version(3).stores({
+      meetings: 'id, title, date, sync_status, organizer_email, *participants, last_synced_at',
+      files: '++id, meeting_id, file_type, status, downloaded_at',
+      syncHistory: '++id, timestamp, event_type, meeting_id',
+      config: 'key',
+      transcriptContent: 'meetingId',
+      summaryContent: 'meetingId',
+      searchMetadata: 'meetingId, *keywords, *speakers'
+    });
+
+    let currentTable = null;
+    let currentData = [];
+
+    // Load stats on page load
+    async function loadStats() {
+      try {
+        const [meetings, files, transcripts, summaries, events] = await Promise.all([
+          db.meetings.count(),
+          db.files.count(),
+          db.transcriptContent ? db.transcriptContent.count() : Promise.resolve(0),
+          db.summaryContent ? db.summaryContent.count() : Promise.resolve(0),
+          db.syncHistory.count()
+        ]);
+
+        document.getElementById('statMeetings').textContent = meetings;
+        document.getElementById('statFiles').textContent = files;
+        document.getElementById('statTranscripts').textContent = transcripts;
+        document.getElementById('statSummaries').textContent = summaries;
+        document.getElementById('statEvents').textContent = events;
+
+        // Estimate database size
+        if (navigator.storage && navigator.storage.estimate) {
+          const estimate = await navigator.storage.estimate();
+          const sizeInMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+          document.getElementById('statSize').textContent = sizeInMB + ' MB';
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // Load table data
+    async function loadTable() {
+      const tableName = document.getElementById('tableSelect').value;
+      if (!tableName) {
+        alert('Please select a table');
+        return;
+      }
+
+      currentTable = tableName;
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('tableContent').style.display = 'none';
+
+      try {
+        const data = await db[tableName].toArray();
+        currentData = data;
+        renderTable(data);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('tableContent').style.display = 'block';
+      } catch (error) {
+        console.error('Error loading table:', error);
+        alert('Error loading table: ' + error.message);
+      }
+    }
+
+    // Render table
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px;">No data found</td></tr>';
+        document.getElementById('tableHead').innerHTML = '';
+        return;
+      }
+
+      // Get column names
+      const columns = Object.keys(data[0]);
+      
+      // Render header
+      const thead = document.getElementById('tableHead');
+      thead.innerHTML = '<tr>' + 
+        columns.map(col => `<th>${col}</th>`).join('') + 
+        '<th>Actions</th></tr>';
+
+      // Render body
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = data.map((row, idx) => {
+        return '<tr>' + 
+          columns.map(col => {
+            let value = row[col];
+            
+            // Format different types
+            if (value === null || value === undefined) return '<td>-</td>';
+            if (typeof value === 'object') return '<td>' + JSON.stringify(value).substring(0, 50) + '...</td>';
+            if (typeof value === 'boolean') return '<td>' + (value ? '✓' : '✗') + '</td>';
+            if (col.includes('date') || col.includes('timestamp') || col.includes('at')) {
+              if (typeof value === 'number') {
+                return '<td>' + new Date(value).toLocaleString() + '</td>';
+              }
+            }
+            if (col === 'sync_status' || col === 'status') {
+              const badgeClass = value === 'synced' || value === 'downloaded' || value === 'completed' ? 'badge-success' :
+                                 value === 'syncing' || value === 'downloading' || value === 'pending' ? 'badge-info' :
+                                 value === 'failed' ? 'badge-danger' : 'badge-warning';
+              return '<td><span class="badge ' + badgeClass + '">' + value + '</span></td>';
+            }
+            
+            return '<td>' + String(value).substring(0, 100) + '</td>';
+          }).join('') +
+          '<td class="actions">' +
+            '<button class="btn btn-sm btn-primary" onclick="viewRecord(' + idx + ')">View</button> ' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteRecord(' + idx + ')">Delete</button>' +
+          '</td></tr>';
+      }).join('');
+    }
+
+    // View record
+    function viewRecord(idx) {
+      const record = currentData[idx];
+      document.getElementById('viewContent').textContent = JSON.stringify(record, null, 2);
+      document.getElementById('viewModal').classList.add('active');
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('viewModal').classList.remove('active');
+    }
+
+    // Delete record
+    async function deleteRecord(idx) {
+      if (!confirm('Are you sure you want to delete this record?')) return;
+
+      const record = currentData[idx];
+      try {
+        // Get primary key
+        let key;
+        if (currentTable === 'meetings') key = record.id;
+        else if (currentTable === 'files') key = record.id;
+        else if (currentTable === 'syncHistory') key = record.id;
+        else if (currentTable === 'config') key = record.key;
+
+        await db[currentTable].delete(key);
+        await loadTable();
+        await loadStats();
+        alert('Record deleted successfully');
+      } catch (error) {
+        console.error('Error deleting record:', error);
+        alert('Error deleting record: ' + error.message);
+      }
+    }
+
+    // Export data as JSON
+    function exportData() {
+      if (currentData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+
+      const json = JSON.stringify(currentData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fireflies-${currentTable}-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Export data as CSV
+    function exportCSV() {
+      if (currentData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+
+      const columns = Object.keys(currentData[0]);
+      const csv = [
+        columns.join(','),
+        ...currentData.map(row => 
+          columns.map(col => {
+            let value = row[col];
+            if (typeof value === 'object') value = JSON.stringify(value);
+            if (typeof value === 'string') value = '"' + value.replace(/"/g, '""') + '"';
+            return value;
+          }).join(',')
+        )
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fireflies-${currentTable}-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Import data
+    function importData() {
+      document.getElementById('importFile').click();
+    }
+
+    // Handle import
+    async function handleImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!Array.isArray(data)) {
+            alert('Invalid JSON format. Expected an array.');
+            return;
+          }
+
+          if (!currentTable) {
+            alert('Please select a table first');
+            return;
+          }
+
+          if (!confirm(`Import ${data.length} records into ${currentTable}?`)) return;
+
+          await db[currentTable].bulkPut(data);
+          await loadTable();
+          await loadStats();
+          alert('Data imported successfully');
+        } catch (error) {
+          console.error('Error importing data:', error);
+          alert('Error importing data: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Clear table
+    async function clearTable() {
+      if (!currentTable) {
+        alert('Please select a table first');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to clear ALL data from ${currentTable}? This cannot be undone.`)) return;
+
+      try {
+        await db[currentTable].clear();
+        await loadTable();
+        await loadStats();
+        alert('Table cleared successfully');
+      } catch (error) {
+        console.error('Error clearing table:', error);
+        alert('Error clearing table: ' + error.message);
+      }
+    }
+
+    // Export all transcripts as combined file
+    async function exportAllTranscripts() {
+      try {
+        const transcripts = await db.transcriptContent.toArray();
+        const meetings = await db.meetings.toArray();
+        
+        if (transcripts.length === 0) {
+          alert('No transcripts found in database');
+          return;
+        }
+
+        // Create a map of meeting details
+        const meetingMap = new Map(meetings.map(m => [m.id, m]));
+
+        // Combine transcripts with meeting metadata
+        const combined = transcripts.map(t => {
+          const meeting = meetingMap.get(t.meetingId);
+          return {
+            meetingId: t.meetingId,
+            meetingTitle: meeting?.title || 'Unknown',
+            meetingDate: meeting?.date || 0,
+            fullText: t.fullText,
+            speakers: t.speakers,
+            lineCount: t.lineCount,
+            indexed_at: t.indexed_at
+          };
+        });
+
+        // Sort by date
+        combined.sort((a, b) => b.meetingDate - a.meetingDate);
+
+        const json = JSON.stringify(combined, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fireflies-all-transcripts-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert(`Exported ${transcripts.length} transcripts successfully!`);
+      } catch (error) {
+        console.error('Error exporting transcripts:', error);
+        alert('Error exporting transcripts: ' + error.message);
+      }
+    }
+
+    // Export all summaries as combined file
+    async function exportAllSummaries() {
+      try {
+        const summaries = await db.summaryContent.toArray();
+        const meetings = await db.meetings.toArray();
+        
+        if (summaries.length === 0) {
+          alert('No summaries found in database');
+          return;
+        }
+
+        // Create a map of meeting details
+        const meetingMap = new Map(meetings.map(m => [m.id, m]));
+
+        // Combine summaries with meeting metadata
+        const combined = summaries.map(s => {
+          const meeting = meetingMap.get(s.meetingId);
+          return {
+            meetingId: s.meetingId,
+            meetingTitle: meeting?.title || 'Unknown',
+            meetingDate: meeting?.date || 0,
+            organizer: meeting?.organizer_email || '',
+            participants: meeting?.participants || [],
+            summaryText: s.summaryText,
+            actionItems: s.actionItems,
+            outline: s.outline,
+            keywords: s.keywords,
+            indexed_at: s.indexed_at
+          };
+        });
+
+        // Sort by date
+        combined.sort((a, b) => b.meetingDate - a.meetingDate);
+
+        const json = JSON.stringify(combined, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fireflies-all-summaries-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert(`Exported ${summaries.length} summaries successfully!`);
+      } catch (error) {
+        console.error('Error exporting summaries:', error);
+        alert('Error exporting summaries: ' + error.message);
+      }
+    }
+
+    // Search
+    document.getElementById('searchBox').addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      if (!search) {
+        renderTable(currentData);
+        return;
+      }
+
+      const filtered = currentData.filter(row => 
+        Object.values(row).some(val => 
+          String(val).toLowerCase().includes(search)
+        )
+      );
+      renderTable(filtered);
+    });
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadStats();
+      document.getElementById('loading').style.display = 'none';
+    });
+
+    // Table select change
+    document.getElementById('tableSelect').addEventListener('change', loadTable);
+  </script>
+</body>
+</html>
+
